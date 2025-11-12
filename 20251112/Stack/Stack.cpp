@@ -10,6 +10,7 @@ Stack::Stack(){
 
 void Stack::push(char c){
     array[index] = c;
+    std::cout << "追加した値 : " << c << "\n";
     index++;
 }
 
@@ -21,7 +22,7 @@ char Stack::pop(){
 }
 
 void Stack::print(){
-    for(int i = 0; i < ARRAY_SIZE; ++i){
+    for(int i = 0; i < index; ++i){
         std::cout << array[i];
     }
 
