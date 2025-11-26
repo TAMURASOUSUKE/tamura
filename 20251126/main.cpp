@@ -50,7 +50,7 @@ int main(){
 
 void stepSeach(SeachState& seach){ 
   
-     auto& goPosition  = seach.goPosition;
+    auto& goPosition  = seach.goPosition;
     auto& wentPosition = seach.wentPosition;
     auto& nowPosition = seach.nowPosition;
 
