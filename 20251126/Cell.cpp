@@ -1,11 +1,12 @@
 #include "Cell.h"
 
+// コンストラクタ
+Cell::Cell(int _x, int _y) : x{_x}, y{_y}{}
 
 // Cellどうしの加算
 Cell Cell::operator +(const Cell& other) const {
 	return Cell(x + other.x, y + other.y);
 }
-
 
 // Cellどうしの減算
 Cell Cell::operator -(const Cell& other) const {

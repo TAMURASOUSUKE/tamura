@@ -7,6 +7,7 @@ const int START_POSITION_Y = 3;
 const int GOAL_POSITION_X = 6;
 const int GOAL_POSITION_Y = 6;
 const int AROUND_COUNT = 4;
+const int NEIGHBORS_COUNT = 4;
 
 const bool FIELD[MAP_WIDTH][MAP_HEIGHT] = 
 {

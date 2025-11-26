@@ -1,12 +1,24 @@
 #include <iostream>
-#include "Constant.h"
 #include <stack>
 #include <vector>
+#include <algorithm>
+#include "Constant.h"
+#include "main.h"
 
-bool checkGoal();
 
 int main(){
-    if(checkGoal()) {
+    SeachState state{};
+    int timer = 0;
+    while (!state.finished)
+    {
+        ++timer;
+        if(timer % 30 == 0){
+            stepSeach(state);
+        }
+    }
+    
+    
+    if(state.isGoal) {
         std::cout << "ゴールまで行けます" << "\n";
     }
     else {
@@ -16,90 +28,115 @@ int main(){
     return 0;
 }
 
-bool checkGoal(){ 
-    std::stack<Cell> goPosition{};
-    Cell nowPosition = START;
-    std::vector<Cell> wentPosition{};
+void stepSeach(SeachState& seach){ 
+  
+     auto& goPosition  = seach.goPosition;
+    auto& wentPosition = seach.wentPosition;
+    auto& nowPosition = seach.nowPosition;
 
-    // 今の位置がゴール位置と一緒でないなら探索する
-    while (true)
-    {
-        if(nowPosition == GOAL) return true;
-        
+    // すでに終わってるなら何もしない
+    if (seach.finished) return;
 
-        // 自分の位置の更新
-        wentPosition.push_back(nowPosition); // いた位置を追加して移動する
-        if(!goPosition.empty()){
-            nowPosition = goPosition.top(); // stackの最後に入っている行ける位置に移動
-            goPosition.pop(); // stackの最後の要素を削除
+    // 今いるマスを登録
+    wentPosition.push_back(nowPosition);
+
+    // 行ける場所をスタックに入れる
+
+    // ラムダ式を使ってみる
+    auto contains = [](const std::vector<Cell>& v, const Cell& c) {
+        return std::find(v.begin(), v.end(), c) != v.end();
+    };
+
+    auto inRange = [](const Cell& pos){
+        return (pos.x >= 0) && (pos.x < MAP_WIDTH) &&
+        (pos.y >= 0) && (pos.y < MAP_HEIGHT);
+    };
+
+    Cell rightPos = nowPosition + RIGHT;
+    Cell upPos    = nowPosition + UP;
+    Cell leftPos  = nowPosition + LEFT;
+    Cell downPos  = nowPosition + DOWN;
+    
+    // 隣にゴールがあるかを見る
+    Cell neighbors[NEIGHBORS_COUNT] = {rightPos, upPos, leftPos, downPos};
+    for(auto& n : neighbors){
+        if(!inRange(n)) continue;
+        if(!FIELD[n.x][n.y]) continue;
+        if(contains(wentPosition, n)) continue;
+
+        if(n == GOAL){
+            nowPosition = n;
+            wentPosition.push_back(nowPosition);
+            seach.isGoal = true;
+            seach.finished = true;
+            drawDFS(wentPosition, nowPosition);
+            return;
         }
-
-        // ゴールチェック用の変数
-        bool isCorectPosition = FIELD[nowPosition.x][nowPosition.y]; // グレーの場所にいないかのチェック
-        bool upCheck = nowPosition + UP == Cell(GOAL_POSITION_X, GOAL_POSITION_Y);
-        bool leftCheck = nowPosition + LEFT == Cell(GOAL_POSITION_X, GOAL_POSITION_Y);
-        bool downCheck = nowPosition + DOWN == Cell(GOAL_POSITION_X, GOAL_POSITION_Y);
-        bool rightCheck = nowPosition + RIGHT == Cell(GOAL_POSITION_X, GOAL_POSITION_Y);
-        // いける位置を計算しゴールチェックする
-        // ゴールチェック(ゴールになるならそこに移動する)
-        if(upCheck && isCorectPosition) nowPosition += UP;
-        else if(leftCheck && isCorectPosition) nowPosition += LEFT;
-        else if(downCheck && isCorectPosition) nowPosition += DOWN;
-        else if(rightCheck && isCorectPosition) nowPosition += RIGHT;
-
-
-
-        // いける位置を追加する
-
-        // 右
-        int rx = nowPosition.x + RIGHT.x;
-        int ry = nowPosition.y + RIGHT.y;
-        bool canCheckRight = 0 <= rx && rx < MAP_WIDTH && 0 <= ry && ry < MAP_HEIGHT;
-        bool isRight = false;
-        if(canCheckRight) isRight = FIELD[rx][ry];
-        bool wentRight = false;
-
-        // 左 
-        int lx = nowPosition.x + LEFT.x;
-        int ly = nowPosition.y + LEFT.y;
-        bool canCheckLeft = 0 <= lx && lx < MAP_WIDTH && 0 <= ly && ly < MAP_HEIGHT;
-        bool isLeft = false;
-        if(canCheckLeft) isLeft = FIELD[lx][ly];
-        bool wentLeft = false;
-
-        // 上
-        int ux = nowPosition.x + UP.x;
-        int uy = nowPosition.y + UP.y;
-        bool canCheckUp = 0 <= ux && ux < MAP_WIDTH && 0 <= uy && uy < MAP_HEIGHT;
-        bool isUp = false;
-        if(canCheckUp) isUp = FIELD[ux][uy];
-        bool wentUp = false;
-
-        // 下
-        int dx = nowPosition.x + DOWN.x;
-        int dy = nowPosition.y + DOWN.y;
-        bool canCheckDown = 0 <= dx && dx < MAP_WIDTH && 0 <= dy && dy < MAP_HEIGHT;
-        bool isDown = false;
-        if(canCheckDown) isDown = FIELD[dx][dy];
-        bool wentDown = false;
-        // 行こうとしている位置が過去に行ったことあるかどうかを判定する
-        for (int i = 0; i < wentPosition.size(); ++i) {
-            if ((nowPosition + RIGHT) == wentPosition[i]) wentRight = true;
-            if ((nowPosition + LEFT)  == wentPosition[i]) wentLeft  = true;
-            if ((nowPosition + UP)    == wentPosition[i]) wentUp    = true;
-            if ((nowPosition + DOWN)  == wentPosition[i]) wentDown  = true;
-        }
-
-        if(isUp && !wentUp) goPosition.push(nowPosition + UP);
-        if(isLeft && !wentLeft) goPosition.push(nowPosition + LEFT);
-        if(isDown && !wentDown) goPosition.push(nowPosition + DOWN);
-        if(isRight && !wentRight) goPosition.push(nowPosition+ RIGHT);
-
-        if(goPosition.empty()) break; // 空になったら処理を抜ける
     }
 
-    return false;
-    
+    // 隣にゴールがないならスタックを積む
+    auto pushIfCanGo = [&](const Cell& pos) {
+        if (!inRange(pos)) return;
+
+        if (!FIELD[pos.x][pos.y]) return;
+        if (contains(wentPosition, pos)) return;
+
+        goPosition.push(pos);
+    };
+
+    pushIfCanGo(rightPos);
+    pushIfCanGo(upPos);
+    pushIfCanGo(leftPos);
+    pushIfCanGo(downPos);
+
+    // 描画
+    drawDFS(wentPosition, nowPosition);
+
+    // 次に行ける場所を見る(ないならゴールなし)
+
+    if (goPosition.empty()) {
+        // もうどこにも行けないならゴールなし
+        seach.isGoal = false;
+        seach.finished = true;
+        return;
+    }
+
+    // 次のステップの nowPosition をここで決める
+    nowPosition = goPosition.top();
+    goPosition.pop();
+    }
+
+void drawDFS(std::vector<Cell>& wnetPos, Cell& nowPos){
+    for(int x = 0; x < MAP_WIDTH; ++x){
+        for(int y = 0; y < MAP_HEIGHT; ++y){
+            bool drawPos = FIELD[x][y];
+            
+            if(drawPos){
+                if(Cell(x, y) == nowPos){
+                    std::cout << "あ";
+                }
+                else{
+                    bool isVisit = false;
+                    for(auto& c : wnetPos){
+                        if(Cell(x, y) == c) {
+                            isVisit = true;
+                            break;
+                        }
+                    }
+
+                    if(isVisit){
+                        std::cout << "🔼";
+                    }
+                    else{
+                        std::cout << "🔲";
+                    }
+                }
+            }
+            else{
+                std::cout << "🔳";
+            }
+        }
+        std::cout << "\n";
+    }
+    std::cout << "\n\n\n";
 }
-
-
