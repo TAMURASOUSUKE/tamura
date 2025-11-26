@@ -1,23 +1,43 @@
 #include <iostream>
 #include <stack>
+#include <thread>
+#include <chrono>
+#include <atomic>
 #include <vector>
 #include <algorithm>
 #include "Constant.h"
 #include "main.h"
 
+// 0.5秒ごとに処理
+void periodicTask(SeachState& seach){
+    using namespace std::chrono_literals; // 500msを使う
+    auto const NEXT_RUN_TIME = 500ms;
+    while(!seach.finished){
+        std::cout << "別スレッド0.5秒ごとに実行中" << "\n";
+        stepSeach(seach);
+
+
+        // 次の実行までの時間を計算し、スリープする
+        auto nextRunTime = std::chrono::steady_clock::now() + NEXT_RUN_TIME;
+        std::this_thread::sleep_until(nextRunTime);
+    }
+    std::cout << "作業が終了しました。" << "\n";
+}
 
 int main(){
     SeachState state{};
-    int timer = 0;
-    while (!state.finished)
-    {
-        ++timer;
-        if(timer % 30 == 0){
-            stepSeach(state);
-        }
+    std::cout << "メインスレッド開始。別のスレッドを起動します" << "\n";
+
+    // 別スレッド(threadの引数は第一引数に呼び出す関数名、それ以降は渡す引数)
+    std::thread task_thread(periodicTask, std::ref(state));
+    std::cout << "メインスレッド : ほかの作業を実行中" << "\n";
+
+    // 別スレッドが処理を終了するまで待つ
+    if(task_thread.joinable()){
+        task_thread.join();
     }
-    
-    
+
+
     if(state.isGoal) {
         std::cout << "ゴールまで行けます" << "\n";
     }
@@ -89,9 +109,6 @@ void stepSeach(SeachState& seach){
     pushIfCanGo(leftPos);
     pushIfCanGo(downPos);
 
-    // 描画
-    drawDFS(wentPosition, nowPosition);
-
     // 次に行ける場所を見る(ないならゴールなし)
 
     if (goPosition.empty()) {
@@ -104,6 +121,9 @@ void stepSeach(SeachState& seach){
     // 次のステップの nowPosition をここで決める
     nowPosition = goPosition.top();
     goPosition.pop();
+
+     // 描画
+    drawDFS(wentPosition, nowPosition);
     }
 
 void drawDFS(std::vector<Cell>& wnetPos, Cell& nowPos){
