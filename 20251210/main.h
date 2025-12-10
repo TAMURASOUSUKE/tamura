@@ -8,7 +8,9 @@ struct SeachState{
     std::queue<Cell> goPosition;
     Cell nowPosition = START;
     std::vector<Cell> wentPosition;
+    std::vector<Cell> isAdded;
     bool finished = false;
     bool isGoal = false;
 };
-bool checkGoal(SeachState& seach);
+void checkGoal(SeachState& seach);
+void drawDFS(std::vector<Cell>& wentPos, Cell& nowPos);
